@@ -1,0 +1,36 @@
+# ===== Dependencies =====
+node_modules/
+
+# ===== Environment variables (RAHASIA: password DB & JWT secret) =====
+.env
+.env.local
+.env.*.local
+
+# ===== File upload pengguna (foto barang & bukti klaim) =====
+uploads/*
+!uploads/.gitkeep
+
+# ===== Logs =====
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Testing =====
+coverage/
+.nyc_output/
+
+# ===== Build/cache =====
+dist/
+build/
+.cache/
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+
+# ===== Editor/IDE (opsional, hapus blok ini jika ingin share settings tim) =====
+.vscode/
+.idea/
+*.swp
