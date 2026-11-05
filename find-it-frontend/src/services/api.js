@@ -3,7 +3,7 @@ import AsyncStorage from'@react-native-async-storage/async-storage';
 
 //  GANTI DENGAN IP LOKAL LAPTOP KAMU (Misal: 192.168.1.15 atau IP Wifi kampus)
 // Jangan pakai'localhost' karena HP/Emulator gak bisa baca localhost laptop
-export const BASE_URL ='http://192.168.43.246:3000'; 
+export const BASE_URL ='http://192.168.2.166:3000'; 
 
 const API = axios.create({
   baseURL: BASE_URL,

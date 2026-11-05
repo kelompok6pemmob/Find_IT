@@ -22,7 +22,14 @@
     },
     "plugins": [
       "expo-font",
-      "expo-status-bar"
-    ]
+      "expo-status-bar",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a444c4e8-aa6b-477b-88cd-5d26b3db767a"
+      }
+    },
+    "owner": "dinda23"
   }
 }
