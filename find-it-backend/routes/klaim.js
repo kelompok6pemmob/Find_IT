@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
+import sendPushNotification from '../utils/sendPushNotification.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -28,6 +29,41 @@ router.post('/', upload.single('bukti'), async (req, res) => {
       `INSERT INTO klaim (id_barang, id_user, alasan_klaim, bukti_kepemilikan, tanggal_klaim)
        VALUES (?, ?, ?, ?, CURDATE())`,
       [id_barang, req.user.id_user, alasan_klaim, bukti]);
+    
+    const id_pemilik = b[0].id_user;
+
+    // Ambil Expo Push Token pemilik laporan
+    const [pemilik] = await pool.query(
+      'SELECT expo_push_token FROM user WHERE id_user = ?',
+      [id_pemilik]
+    );
+
+    const token = pemilik[0]?.expo_push_token;
+
+    // Simpan notifikasi ke database
+    await pool.query(
+      `INSERT INTO notifikasi (id_user, judul, pesan, tipe, id_barang, id_klaim)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        id_pemilik,
+        'Klaim Barang Baru',
+        'Ada pengguna yang mengajukan klaim pada laporan barangmu.',
+        'klaim',
+        id_barang,
+        r.insertId,
+      ]
+    );
+
+    // Kirim push notification ke HP pemilik
+    if (token) {
+      await sendPushNotification(
+        token,
+        'Klaim Barang Baru',
+        'Ada pengguna yang mengajukan klaim pada laporan barangmu.',
+        { id_barang, id_klaim: r.insertId }
+      );
+    }
+
     res.status(201).json({
       id_klaim: r.insertId,
       jenis_laporan: b[0].status, // 'Hilang' (F1) atau 'Ditemukan' (F2)
@@ -93,8 +129,59 @@ router.patch('/:id/status', async (req, res) => {
                         WHERE id_barang = ? AND id_klaim <> ? AND status_klaim = 'Pending'`,
                         [k[0].id_barang, req.params.id]);
     }
+    
     await conn.commit();
-    res.json({ message: `Klaim ${status_klaim.toLowerCase()}${status_klaim === 'Diterima' ? ', status barang menjadi Dikembalikan' : ''}` });
+
+    // Ambil data pengklaim
+    const id_pengklaim = k[0].id_user;
+
+    const [pengklaim] = await pool.query(
+      'SELECT expo_push_token FROM user WHERE id_user = ?',
+      [id_pengklaim]
+    );
+
+    const token = pengklaim[0]?.expo_push_token;
+
+    const judulNotif = status_klaim === 'Diterima'
+      ? 'Klaim Diterima'
+      : 'Klaim Ditolak';
+
+    const pesanNotif = status_klaim === 'Diterima'
+      ? 'Selamat! Klaim barangmu telah diterima.'
+      : 'Maaf, klaim barangmu telah ditolak.';
+
+    // Simpan notifikasi ke database
+    await pool.query(
+      `INSERT INTO notifikasi (id_user, judul, pesan, tipe, id_barang, id_klaim)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        id_pengklaim,
+        judulNotif,
+        pesanNotif,
+        'klaim',
+        k[0].id_barang,
+        req.params.id,
+      ]
+    );
+
+    // Kirim push notification
+    if (token) {
+      await sendPushNotification(
+        token,
+        judulNotif,
+        pesanNotif,
+        {
+          id_barang: k[0].id_barang,
+          id_klaim: Number(req.params.id),
+          status_klaim,
+        }
+      );
+    }
+
+    res.json({
+      message: `Klaim ${status_klaim.toLowerCase()}${status_klaim === 'Diterima' ? ', status barang menjadi Dikembalikan' : ''}`
+    });
+
   } catch (e) {
     await conn.rollback();
     res.status(500).json({ message: e.message });
