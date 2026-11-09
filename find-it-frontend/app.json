@@ -7,7 +7,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Find It membutuhkan akses kamera untuk mengambil foto barang yang hilang/ditemukan.",
+        "NSLocationWhenInUseUsageDescription": "Find It membutuhkan akses lokasi untuk menandai titik kejadian di peta.",
+        "NSPhotoLibraryUsageDescription": "Find It membutuhkan akses galeri untuk mengunggah foto barang."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -15,7 +20,14 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -23,7 +35,26 @@
     "plugins": [
       "expo-font",
       "expo-status-bar",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Izinkan Find It mengakses kamera untuk mengambil foto barang."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Izinkan Find It mengakses lokasi untuk menandai titik kejadian di peta."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Find It membutuhkan akses galeri untuk mengunggah foto barang.",
+          "cameraPermission": "Find It membutuhkan akses kamera untuk mengambil foto barang."
+        }
+      ]
     ],
     "extra": {
       "eas": {

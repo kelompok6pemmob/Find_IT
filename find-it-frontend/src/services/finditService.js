@@ -1,166 +1,84 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import API, { BASE_URL } from './api';
 
-// Helper agar URL foto dari backend bisa dibaca di HP
 export const formatPhotoUrl = (url) => {
   if (!url) return null;
   if (typeof url !== 'string') return null;
-
-  // Local file URIs from ImagePicker (camera / gallery)
-  if (
-    url.startsWith('file:') ||
-    url.startsWith('content:') ||
-    url.startsWith('data:') ||
-    url.startsWith('blob:')
-  ) {
-    return url;
-  }
-
-  if (url.includes('localhost:3000')) {
-    return url.replace('http://localhost:3000', BASE_URL);
-  }
-
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-
-  if (url.startsWith('/')) {
-    return `${BASE_URL}${url}`;
-  }
-
+  if (url.startsWith('file:') || url.startsWith('content:') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('localhost:3000')) return url.replace('http://localhost:3000', BASE_URL);
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `${BASE_URL}${url}`;
   return `${BASE_URL}/${url}`;
 };
 
-// Helper format murni tanggal kejadian
 export const formatKejadianDate = (dateStr) => {
   if (!dateStr) return '-';
-
   let cleanDate = dateStr;
-
-  if (cleanDate.includes('•')) {
-    cleanDate = cleanDate.split('•')[0].trim();
-  }
-
+  if (cleanDate.includes('•')) cleanDate = cleanDate.split('•')[0].trim();
   const match = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-
   if (match) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-
-    const y = match[1];
-    const m = months[parseInt(match[2], 10) - 1];
-    const d = parseInt(match[3], 10);
-
-    return `${d} ${m} ${y}`;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return `${parseInt(match[3], 10)} ${months[parseInt(match[2], 10) - 1]} ${match[1]}`;
   }
-
   return cleanDate;
 };
 
-// Catat waktu upload lokal untuk setiap postingan
-export const recordPostUploadTime = async (
-  idBarang,
-  timestamp = Date.now()
-) => {
+export const recordPostUploadTime = async (idBarang, timestamp = Date.now()) => {
   try {
     const raw = await AsyncStorage.getItem('post_upload_timestamps');
     const map = raw ? JSON.parse(raw) : {};
-
     map[idBarang] = timestamp;
-
-    await AsyncStorage.setItem(
-      'post_upload_timestamps',
-      JSON.stringify(map)
-    );
+    await AsyncStorage.setItem('post_upload_timestamps', JSON.stringify(map));
   } catch (e) {}
 };
 
-// Ambil seluruh waktu upload lokal
 export const getPostUploadTimes = async () => {
   try {
     const raw = await AsyncStorage.getItem('post_upload_timestamps');
     return raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    return {};
-  }
+  } catch (e) { return {}; }
 };
 
-// Helper format waktu upload aktual
+// Helper waktu upload (FALLBACK KE created_at DARI BACKEND BARU)
 export const getWaktuUpload = (item, localMap = {}) => {
   if (!item) return '';
-
   let ts = null;
-
-  if (item.id_barang && localMap && localMap[item.id_barang]) {
-    ts = new Date(localMap[item.id_barang]);
-  }
-
-  if (!ts && item.foto_url) {
-    const match = item.foto_url.match(/uploads\/(\d{13})-/);
-
-    if (match) {
-      ts = new Date(parseInt(match[1], 10));
-    }
-  }
-
-  if (!ts || isNaN(ts.getTime())) {
-    return formatKejadianDate(item.tanggal);
-  }
+  if (item.id_barang && localMap && localMap[item.id_barang]) ts = new Date(localMap[item.id_barang]);
+  if (!ts && item.created_at) ts = new Date(item.created_at); // Schema Baru!
+  
+  if (!ts || isNaN(ts.getTime())) return formatKejadianDate(item.tanggal_kejadian || item.tanggal);
 
   const now = new Date();
   const diffMs = now.getTime() - ts.getTime();
   const diffMins = Math.floor(diffMs / (60 * 1000));
   const diffHours = Math.floor(diffMins / 60);
-
   const hours = String(ts.getHours()).padStart(2, '0');
   const mins = String(ts.getMinutes()).padStart(2, '0');
 
   if (diffMins >= 0 && diffMins < 1) return 'Baru saja';
-
-  if (diffMins >= 1 && diffMins < 60) {
-    return `${diffMins} menit lalu`;
-  }
-
-  if (diffHours >= 1 && diffHours < 24) {
-    return `${diffHours} jam lalu`;
-  }
-
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-  ];
-
+  if (diffMins >= 1 && diffMins < 60) return `${diffMins} menit lalu`;
+  if (diffHours >= 1 && diffHours < 24) return `${diffHours} jam lalu`;
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   return `${ts.getDate()} ${months[ts.getMonth()]} ${ts.getFullYear()} • ${hours}:${mins}`;
 };
 
 export const getKejadianLabel = (status) => {
   if (status === 'Ditemukan') return 'Tanggal Ditemukan';
   if (status === 'Hilang') return 'Tanggal Kehilangan';
-
   return 'Tanggal Kejadian';
 };
 
-// --- AUTH SERVICES ---
-
+// --- AUTH & AKADEMIK SERVICES ---
 export const loginUser = async (emailOrObj, password) => {
-  const payload =
-    typeof emailOrObj === 'object' && emailOrObj !== null
-      ? emailOrObj
-      : { email: emailOrObj, password };
-
+  const payload = typeof emailOrObj === 'object' && emailOrObj !== null ? emailOrObj : { email: emailOrObj, password };
   const res = await API.post('/auth/login', payload);
   return res.data;
 };
 
 export const registerUser = async (namaOrObj, email, password) => {
-  const payload =
-    typeof namaOrObj === 'object' && namaOrObj !== null
-      ? namaOrObj
-      : { nama: namaOrObj, email, password };
-
+  const payload = typeof namaOrObj === 'object' && namaOrObj !== null ? namaOrObj : { nama: namaOrObj, email, password };
   const res = await API.post('/auth/register', payload);
   return res.data;
 };
@@ -170,17 +88,29 @@ export const googleLogin = async (googleData) => {
   return res.data;
 };
 
-// --- KATEGORI SERVICES ---
+// BARU: Ambil profil lengkap (termasuk nama_fakultas & nama_prodi)
+export const getMyProfile = async () => {
+  const res = await API.get('/auth/me');
+  return res.data;
+};
 
+export const getFakultas = async () => {
+  const res = await API.get('/akademik/fakultas');
+  return res.data;
+};
+
+export const getProdi = async (idFakultas) => {
+  const res = await API.get('/akademik/prodi', { params: { id_fakultas: idFakultas } });
+  return res.data;
+};
+
+// --- KATEGORI & BARANG SERVICES ---
 export const getKategori = async () => {
   const res = await API.get('/kategori');
   return res.data;
 };
 
-// --- BARANG SERVICES ---
-
 export const getBarangList = async (params = {}) => {
-  // params: { status, id_kategori, lokasi, dari, sampai, sort }
   const res = await API.get('/barang', { params });
   return res.data;
 };
@@ -195,43 +125,23 @@ export const getBarangSaya = async () => {
     const saved = await AsyncStorage.getItem('user_data');
     const user = saved ? JSON.parse(saved) : null;
     const myId = user?.id_user;
-
-    // Backend tidak memiliki endpoint /barang/saya
-    // sehingga kita ambil feed barang dan filter berdasarkan id_user
     const res = await API.get('/barang');
-
     if (Array.isArray(res.data)) {
-      if (myId) {
-        return res.data.filter(
-          (item) => Number(item.id_user) === Number(myId)
-        );
-      }
-
+      if (myId) return res.data.filter((item) => Number(item.id_user) === Number(myId));
       return res.data;
     }
-
     return [];
-  } catch (error) {
-    console.log('Error in getBarangSaya:', error?.message);
-    throw error;
-  }
+  } catch (error) { throw error; }
 };
 
 export const createBarangReport = async (formData) => {
-  // formData bertipe FormData() karena kirim file foto
   const res = await API.post('/barang', formData, {
-    headers: {
-      Accept: 'application/json',
-    },
+    headers: { Accept: 'application/json' },
     transformRequest: (data, headers) => {
-      if (headers) {
-        delete headers['Content-Type'];
-      }
-
+      if (headers) delete headers['Content-Type'];
       return data;
     },
   });
-
   return res.data;
 };
 
@@ -240,37 +150,12 @@ export const updateStatusBarang = async (idBarang, status) => {
   return res.data;
 };
 
-export const deleteBarangReport = async (idBarang) => {
-  try {
-    // Backend menggunakan PATCH /barang/:id/status
-    const res = await API.patch(`/barang/${idBarang}/status`, {
-      status: 'Dikembalikan',
-    });
-
-    return res.data;
-  } catch (err) {
-    console.log('Status update error in deleteBarangReport:', err?.message);
-    return { success: true };
-  }
-};
-
 // --- KLAIM SERVICES ---
-
 export const submitKlaim = async (formData) => {
-  // formData bertipe FormData() karena kirim file bukti
   const res = await API.post('/klaim', formData, {
-    headers: {
-      Accept: 'application/json',
-    },
-    transformRequest: (data, headers) => {
-      if (headers) {
-        delete headers['Content-Type'];
-      }
-
-      return data;
-    },
+    headers: { Accept: 'application/json' },
+    transformRequest: (data, headers) => { if (headers) delete headers['Content-Type']; return data; },
   });
-
   return res.data;
 };
 
@@ -285,77 +170,104 @@ export const getKlaimMasuk = async () => {
 };
 
 export const updateStatusKlaim = async (idKlaim, status_klaim) => {
-  // status_klaim: 'Diterima' | 'Ditolak'
-  const res = await API.patch(`/klaim/${idKlaim}/status`, {
-    status_klaim,
+  const res = await API.patch(`/klaim/${idKlaim}/status`, { status_klaim });
+  return res.data;
+};
+
+// --- PESAN / CHAT SERVICES (DIREVISI KE ROOM_CHAT) ---
+// --- PESAN / CHAT SERVICES (BARU: BERBASIS ROOM) ---
+export const getChatRoomsSaya = async () => {
+  const res = await API.get('/pesan/room/saya');
+  return res.data;
+};
+
+export const openOrCreateRoom = async (idBarang, idLawan) => {
+  const res = await API.post('/pesan/room', { id_barang: idBarang, id_lawan: idLawan });
+  return res.data;
+};
+
+export const getPesanByRoom = async (idRoom) => {
+  const res = await API.get(`/pesan/room/${idRoom}`);
+  return res.data;
+};
+
+export const sendPesanKeRoom = async (idRoom, isiPesan, tipePesan = 'teks', fileAsset = null) => {
+  const formData = new FormData();
+  formData.append('id_room', idRoom);
+  formData.append('tipe_pesan', tipePesan);
+  formData.append('isi_pesan', isiPesan || (tipePesan === 'gambar' ? '[Gambar]' : ''));
+  
+  if (fileAsset && fileAsset.uri) {
+    const ext = fileAsset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+    const mime = fileAsset.mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+    formData.append('gambar', {
+      uri: Platform.OS === 'android' ? fileAsset.uri : fileAsset.uri.replace('file://', ''),
+      name: fileAsset.fileName || `chat_${Date.now()}.${ext}`,
+      type: mime,
+    });
+  }
+
+  const res = await API.post('/pesan', formData, {
+    headers: { Accept: 'application/json' },
+    transformRequest: (data, headers) => { if (headers) delete headers['Content-Type']; return data; },
   });
-
   return res.data;
 };
 
-// --- PESAN / CHAT SERVICES ---
-
-export const getKontakChatSaya = async () => {
-  const res = await API.get('/pesan/kontak/saya');
+export const markRoomAsRead = async (idRoom) => {
+  const res = await API.patch(`/pesan/room/${idRoom}/read`);
   return res.data;
 };
 
-export const getPesanByBarang = async (idBarang, idLawanUser) => {
-  const res = await API.get(`/pesan/${idBarang}`, {
-    params: { dengan: idLawanUser },
+// --- NOTIFIKASI SERVICES (DIREVISI KE JWT) ---
+export const saveExpoPushToken = async (expo_push_token, platform = 'Android') => {
+  const res = await API.post('/notifikasi/token', { expo_push_token, platform });
+  return res.data;
+};
+
+export const getNotifikasi = async () => {
+  const res = await API.get('/notifikasi');
+  return res.data;
+};
+
+export const markNotifikasiRead = async (id) => {
+  const res = await API.patch(`/notifikasi/${id}/read`);
+  return res.data;
+};
+
+export const markAllNotifikasiRead = async () => {
+  const res = await API.patch('/notifikasi/read-all');
+  return res.data;
+};
+// Update profil user ke backend (untuk sinkronisasi EditProfileScreen)
+export const updateMyProfile = async (formData) => {
+  const res = await API.patch('/auth/profil', formData, {
+    headers: { Accept: 'application/json' },
+    transformRequest: (data, headers) => {
+      if (headers) delete headers['Content-Type'];
+      return data;
+    },
   });
-
   return res.data;
 };
 
-export const sendPesan = async (
-  idBarang,
-  idPenerima,
-  isiPesan
-) => {
-  const res = await API.post('/pesan', {
-    id_barang: idBarang,
-    id_penerima: idPenerima,
-    isi_pesan: isiPesan,
+// BARU: Kirim pesan gambar ke room (pakai FormData)
+export const sendPesanGambarKeRoom = async (idRoom, imageAsset, caption = '') => {
+  const formData = new FormData();
+  formData.append('id_room', String(idRoom));
+  formData.append('tipe_pesan', 'gambar');
+  formData.append('isi_pesan', caption || '[Gambar]');
+  const fileUri = imageAsset.uri;
+  const ext = fileUri.split('.').pop()?.toLowerCase() || 'jpg';
+  const mime = imageAsset.mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+  formData.append('gambar', {
+    uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
+    name: imageAsset.fileName || `chat_${Date.now()}.${ext}`,
+    type: mime,
   });
-
-  return res.data;
-};
-
-export const markPesanAsRead = async (idBarang) => {
-  const res = await API.patch(`/pesan/${idBarang}/read`);
-  return res.data;
-};
-
-// --- NOTIFIKASI SERVICES ---
-
-// Simpan Expo Push Token ke backend
-export const saveExpoPushToken = async (
-  id_user,
-  expo_push_token
-) => {
-  const res = await API.post('/notifikasi/token', {
-    id_user,
-    expo_push_token,
+  const res = await API.post('/pesan', formData, {
+    headers: { Accept: 'application/json' },
+    transformRequest: (data, headers) => { if (headers) delete headers['Content-Type']; return data; },
   });
-
-  return res.data;
-};
-
-// Ambil daftar notifikasi user
-export const getNotifikasi = async (id_user) => {
-  const res = await API.get('/notifikasi', {
-    params: { id_user },
-  });
-
-  return res.data;
-};
-
-// Tandai notifikasi sudah dibaca
-export const markNotifikasiRead = async (id, id_user) => {
-  const res = await API.patch(`/notifikasi/${id}/read`, {
-    id_user,
-  });
-
   return res.data;
 };

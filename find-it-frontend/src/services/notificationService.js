@@ -1,11 +1,9 @@
-
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-
+import { Platform } from 'react-native';
 import { saveExpoPushToken } from './finditService';
 
-// Konfigurasi tampilan notifikasi saat aplikasi aktif
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -15,58 +13,48 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Mengambil Expo Push Token dan menyimpannya ke backend
-export const registerForPushNotifications = async (id_user) => {
+export const registerForPushNotifications = async () => {
   try {
-    // Push notification memerlukan perangkat fisik
     if (!Device.isDevice) {
-      console.log('Push notification memerlukan perangkat fisik');
+      console.log('⚠️ Push notification butuh perangkat fisik (bukan emulator)');
       return null;
     }
 
-    // Meminta izin notifikasi
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
-
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-
     if (finalStatus !== 'granted') {
-      console.log('Izin notifikasi tidak diberikan');
+      console.log('⚠️ Izin notifikasi ditolak');
       return null;
     }
 
-    // Mengambil project ID Expo
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
-
     if (!projectId) {
-      console.log('EAS Project ID belum tersedia');
+      console.log('⚠️ EAS Project ID belum ada di app.json');
       return null;
     }
 
-    // Mengambil Expo Push Token
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
-
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const expoPushToken = tokenData.data;
+    console.log('🔔 Expo Push Token:', expoPushToken);
 
-    console.log('Expo Push Token:', expoPushToken);
-
-    // Menyimpan token ke database melalui backend
-    await saveExpoPushToken(id_user, expoPushToken);
-
-    console.log('Expo Push Token berhasil disimpan ke backend');
-
+    // ✅ Panggil TANPA id_user — backend ambil dari JWT
+    await saveExpoPushToken(
+      expoPushToken,
+      Platform.OS === 'ios' ? 'iOS' : 'Android'
+    );
+    console.log('✅ Token tersimpan ke backend');
     return expoPushToken;
   } catch (error) {
-    console.log('Register push notification error:', error.message);
+    console.error('❌ Register push gagal:', error.message);
+    if (error?.response?.data) {
+      console.error('Response backend:', error.response.data);
+    }
     return null;
   }
 };

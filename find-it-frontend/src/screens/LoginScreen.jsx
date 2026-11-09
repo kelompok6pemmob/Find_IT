@@ -103,7 +103,7 @@ export default function LoginScreen({ navigation }) {
         // REGISTRASI EXPO PUSH TOKEN
         // ==========================================
         if (mergedUser?.id_user) {
-          registerForPushNotifications(mergedUser.id_user)
+          registerForPushNotifications()
             .then((token) => {
               if (token) {
                 console.log(
