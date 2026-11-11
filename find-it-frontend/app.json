@@ -1,13 +1,15 @@
 {
   "expo": {
-    "name": "find-it-frontend",
-    "slug": "find-it-frontend",
+    "name": "FindIt UINSA",
+    "slug": "findit-uinsa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "scheme": "findituinsa",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.firr.findit",
       "infoPlist": {
         "NSCameraUsageDescription": "Find It membutuhkan akses kamera untuk mengambil foto barang yang hilang/ditemukan.",
         "NSLocationWhenInUseUsageDescription": "Find It membutuhkan akses lokasi untuk menandai titik kejadian di peta.",
@@ -15,6 +17,8 @@
       }
     },
     "android": {
+      "package": "com.firr.findit",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +30,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
       ]
     },
     "web": {
@@ -35,7 +41,16 @@
     "plugins": [
       "expo-font",
       "expo-status-bar",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10B981",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "FindIt UINSA"
+        }
+      ],
       [
         "expo-camera",
         {
@@ -58,9 +73,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "a444c4e8-aa6b-477b-88cd-5d26b3db767a"
+        "projectId": "23a6f446-b061-498d-a903-a5b907e134ac"
       }
     },
-    "owner": "dinda23"
+    "owner": "firr"
   }
 }

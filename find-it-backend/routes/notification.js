@@ -6,14 +6,13 @@ import sendPushNotification from '../utils/sendPushNotification.js';
 const router = Router();
 router.use(authMiddleware);
 
-// POST /notifikasi/token
+// POST /notifikasi/token → simpan token ke tabel user_device
 router.post('/token', async (req, res) => {
   try {
     const { expo_push_token, platform = 'Android' } = req.body;
     if (!expo_push_token || typeof expo_push_token !== 'string') {
       return res.status(400).json({ message: 'expo_push_token wajib berupa string' });
     }
-    // Validasi format token Expo
     if (!expo_push_token.startsWith('ExponentPushToken[')) {
       return res.status(400).json({ message: 'Format expo_push_token tidak valid' });
     }

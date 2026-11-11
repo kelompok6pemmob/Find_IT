@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // IP LOKAL LAPTOP (Sudah disesuaikan dengan permintaanmu)
-export const BASE_URL = 'http://192.168.1.104:3000'; 
+export const BASE_URL = 'http://192.168.1.140:3000'; 
 
 const API = axios.create({
   baseURL: BASE_URL,
